@@ -1,0 +1,6 @@
+query fetchProduct($companyID: Int!){
+    getProducts(companyID: $companyID){
+        _id
+        name
+    }
+}

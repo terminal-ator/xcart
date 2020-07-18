@@ -1,0 +1,6 @@
+mutation addSkuToCart($input: AddSkuInput!){
+    addSkuToCart(input:$input){
+        code
+        message
+    }
+}

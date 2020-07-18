@@ -1,0 +1,8 @@
+mutation signinUser($username: String!, $password: String!){
+    signinUser(username: $username, password: $password){
+        code
+        message
+        successful
+        token
+    }
+}

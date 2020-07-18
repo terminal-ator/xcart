@@ -1,0 +1,15 @@
+query Product($ProductID: String!){
+    getProduct(productID: $ProductID){
+        _id
+        assoc_company
+        company
+        name
+        skus{
+            code
+            mrp
+            name
+            outerUnits
+            caseUnits
+        }
+    }
+}
