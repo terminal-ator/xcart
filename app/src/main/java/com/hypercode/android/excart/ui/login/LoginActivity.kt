@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 
 import com.hypercode.android.excart.R
 
@@ -82,10 +83,13 @@ class LoginActivity : AppCompatActivity() {
             setOnEditorActionListener { _, actionId, _ ->
                 when (actionId) {
                     EditorInfo.IME_ACTION_DONE ->
-                        loginViewModel.login(
-                            username.text.toString(),
-                            password.text.toString()
-                        )
+
+                            loginViewModel.login(
+                                username.text.toString(),
+                                password.text.toString()
+                            )
+
+
                 }
                 false
             }
@@ -93,6 +97,7 @@ class LoginActivity : AppCompatActivity() {
             login.setOnClickListener {
                 loading.visibility = View.VISIBLE
                 loginViewModel.login(username.text.toString(), password.text.toString())
+
             }
         }
     }
