@@ -11,7 +11,9 @@ import com.hypercode.android.excart.data.Result
 import com.hypercode.android.excart.R
 import kotlinx.coroutines.launch
 
-class LoginViewModel(private val loginRepository: LoginRepository) : ViewModel() {
+class LoginViewModel() : ViewModel() {
+
+    private val loginRepository = LoginRepository.get()
 
     private val _loginForm = MutableLiveData<LoginFormState>()
     val loginFormState: LiveData<LoginFormState> = _loginForm

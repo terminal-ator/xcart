@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.lifecycle.lifecycleScope
@@ -22,10 +23,13 @@ import com.example.FetchProductQuery
 import com.hypercode.android.excart.R
 import com.hypercode.android.excart.apolloClient
 import com.hypercode.android.excart.ui.productDetail.ProductDetailFragment
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.w3c.dom.Text
 
 const val TAG = "Homefragment"
+
+@AndroidEntryPoint
 class HomeFragment : Fragment() {
 
     // call back for hosting activity
@@ -36,7 +40,7 @@ class HomeFragment : Fragment() {
     private var callbacks: Callbacks? = null
 
 
-    private lateinit var homeViewModel: HomeViewModel
+    private  val homeViewModel: HomeViewModel by viewModels()
     private lateinit var productRecyclerView: RecyclerView
     private lateinit var products: List<FetchProductQuery.GetProduct?>
 
@@ -52,33 +56,19 @@ class HomeFragment : Fragment() {
             container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View? {
-        homeViewModel =
-                ViewModelProviders.of(this).get(HomeViewModel::class.java)
         val root = inflater.inflate(R.layout.fragment_home, container, false)
         productRecyclerView = root.findViewById(R.id.product_recycler) as RecyclerView
         productRecyclerView.layoutManager = LinearLayoutManager(context)
-        return root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        lifecycleScope.launchWhenResumed{
-            val response =
-                try {
-                    apolloClient.query(FetchProductQuery(companyID = 2)).toDeferred().await()
-                }catch (e: ApolloException){
-                    Log.d("HomeFragment", "Failed", e)
-                    null
-                }
-
-            val fetchProducts = response?.data?.getProducts?.filterNotNull()
-            if(fetchProducts!=null && !response.hasErrors() ){
-                products = fetchProducts;
-                updateUI();
+        homeViewModel.getProducts().observe(
+            viewLifecycleOwner,
+            Observer {
+                    if(it!=null){
+                        products = it
+                        updateUI()
+                    }
             }
-
-        }
+        )
+        return root
     }
 
     private inner class ProductHolder(view: View):RecyclerView.ViewHolder(view), View.OnClickListener{

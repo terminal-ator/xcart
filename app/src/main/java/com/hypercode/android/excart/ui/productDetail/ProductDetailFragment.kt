@@ -11,6 +11,8 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import androidx.lifecycle.lifecycleScope
@@ -28,14 +30,20 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.hypercode.android.excart.MainActivity
 import com.hypercode.android.excart.R
 import com.hypercode.android.excart.apolloClient
+import com.hypercode.android.excart.authApolloClient
+import com.hypercode.android.excart.data.model.Sku
+import dagger.hilt.android.AndroidEntryPoint
 
 const val TAG = "ProductDetailFragment"
+
+@AndroidEntryPoint
 class ProductDetailFragment: Fragment() {
 
     val args: ProductDetailFragmentArgs by navArgs()
-    private lateinit var productDetailViewModel: ProductDetailViewModel
+    private val productDetailViewModel: ProductDetailViewModel by viewModels()
     private lateinit var recyclerView: RecyclerView
     private lateinit var saveButton: Button
+    private lateinit var productHeading: TextView
     private var adapter: SkuAdapter? = null
 //    private  var product: ProductQuery.GetProduct? = null?
     private var skuCodes: MutableList<SkuCodes> = mutableListOf()
@@ -47,57 +55,46 @@ class ProductDetailFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val root = inflater.inflate(R.layout.fragment_product_detail, container, false)
-        productDetailViewModel = ViewModelProviders.of(this).get(ProductDetailViewModel::class.java)
         recyclerView = root.findViewById(R.id.sku_recycler) as RecyclerView
+        productHeading = root.findViewById(R.id.tv_product_name) as TextView
+        saveButton = root.findViewById(R.id.save_button) as Button
         recyclerView.layoutManager = LinearLayoutManager(context)
+        (recyclerView.layoutManager as LinearLayoutManager).stackFromEnd = true
+        productDetailViewModel.getProduct(args.productId).observe(
+            viewLifecycleOwner,
+            Observer {
+                product ->
+                    if(product!=null){
+                        productDetailViewModel.product.postValue(product)
+                        productHeading.apply {
+                            text = product.name
+                        }
+                        adapter = SkuAdapter(product.skus)
+                        recyclerView.adapter = adapter
+                    }
 
+            }
+        )
         return root
     }
 
     fun addSku(sku_code: String, quantity: Int){
-//        val skuCode = SkuCodes( sku_code = sku_code, quantity = quantity)
-//        skuCodes.add(skuCode);
         codeMap[sku_code] = quantity
-//        Log.i(TAG, skuCodes.toString());
         Log.i(TAG, codeMap.toString());
 
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val id = args.productId
-        Log.i(TAG,"Got the id:, $id")
-        lifecycleScope.launchWhenResumed{
-            val response = try{
-                apolloClient.query(ProductQuery(productID = id)).toDeferred().await()
-            }catch (e: ApolloException){
-                Log.d(TAG, "Failed", e)
-                null
-            }
-
-            val product = response?.data?.getProduct
-            if(product!=null && !response.hasErrors()){
-                productDetailViewModel.product.postValue(product)
-                var headingView: TextView = view.findViewById(R.id.tv_product_name)
-                headingView.apply {
-                    text = product.name
-                }
-                adapter = SkuAdapter(product.skus)
-                recyclerView.adapter = adapter
-                Log.d(TAG, "The products is : ${product.name}" )
-            }
-        }
-        saveButton = view.findViewById(R.id.save_button)
         saveButton.setOnClickListener{
-
             if(codeMap.isNotEmpty()){
-
                 var skuCodes: MutableList<SkuCodes> = mutableListOf()
                 codeMap.forEach{
                     (key,value)->
                         skuCodes.add(SkuCodes(sku_code = key, quantity = value))
+                        val sku = Sku(code = key, quantity = value)
+                        productDetailViewModel.productRepository.updateOrInsert(sku)
                 }
-
-                var mutationInput: AddSkuInput = AddSkuInput(
+                var mutationInput = AddSkuInput(
                     // TODO Remove static assoc company
                     assoc_company = 2,
                     product_id = args.productId,
@@ -105,12 +102,11 @@ class ProductDetailFragment: Fragment() {
                     user_id = "5f0182ee5b11301c873d9491",
                     skus = skuCodes
                 )
-
                 Log.i(TAG, mutationInput.toString())
                 saveButton.visibility = View.GONE
                 lifecycleScope.launchWhenResumed{
                     val response = try {
-                        apolloClient.mutate(AddSkuToCartMutation(input = mutationInput)).toDeferred().await()
+                        authApolloClient().mutate(AddSkuToCartMutation(input = mutationInput)).toDeferred().await()
                     }catch (e: Exception){
                         Log.d(TAG, "Failed to add to cart", e)
                         null
@@ -135,6 +131,14 @@ class ProductDetailFragment: Fragment() {
             this.sku = sku
             skuName.apply {
                 text = sku.name
+            }
+            if(sku!=null){
+                val dbSku = productDetailViewModel.productRepository.getSku(sku.code!!)
+                dbSku.observe(viewLifecycleOwner, Observer {
+                    sku -> if(sku!=null){
+                       quantityEditText.setText(sku.quantity.toString())
+                    }
+                })
             }
             quantityEditText.addTextChangedListener(object: TextWatcher{
                 override fun afterTextChanged(s: Editable?) {

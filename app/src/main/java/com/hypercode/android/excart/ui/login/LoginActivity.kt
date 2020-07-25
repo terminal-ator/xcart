@@ -1,6 +1,8 @@
 package com.hypercode.android.excart.ui.login
 
 import android.app.Activity
+import android.app.IntentService
+import android.content.Intent
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import android.os.Bundle
@@ -15,6 +17,7 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
+import com.hypercode.android.excart.MainActivity
 
 import com.hypercode.android.excart.R
 
@@ -58,11 +61,15 @@ class LoginActivity : AppCompatActivity() {
             }
             if (loginResult.success != null) {
                 updateUiWithUser(loginResult.success)
+                setResult(Activity.RESULT_OK)
+                val intent = Intent(this, MainActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                startActivity(intent)
+                finish()
             }
-            setResult(Activity.RESULT_OK)
 
             //Complete and destroy login activity once successful
-            finish()
         })
 
         username.afterTextChanged {

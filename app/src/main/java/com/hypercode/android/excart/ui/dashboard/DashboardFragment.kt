@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
+import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -15,10 +16,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.apollographql.apollo.ApolloClient
 import com.apollographql.apollo.coroutines.toDeferred
+import com.apollographql.apollo.fetcher.ApolloResponseFetchers
 import com.example.GetCartQuery
 import com.hypercode.android.excart.R
 import com.hypercode.android.excart.apolloClient
+import com.hypercode.android.excart.authApolloClient
 
 private const val TAG = "CartFragment"
 class DashboardFragment : Fragment() {
@@ -40,7 +44,7 @@ class DashboardFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(context)
         dashboardViewModel.cartProducts.observe(viewLifecycleOwner, Observer {
             if(it.isNotEmpty()){
-                Log.i(TAG,"Got products ${it.toString()}")
+                Log.i(TAG,"Got products $it")
                 adapter = ProductAdapter(it)
                 recyclerView.adapter = adapter
             }
@@ -52,7 +56,7 @@ class DashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launchWhenResumed{
             val response = try{
-                apolloClient.query(GetCartQuery(userid = userid )).toDeferred().await()
+                authApolloClient().query(GetCartQuery(userid = userid )).responseFetcher(ApolloResponseFetchers.NETWORK_ONLY).toDeferred().await()
             }catch (e: Exception){
                 Log.d(TAG, "Failed to access server", e)
                 null
@@ -71,7 +75,7 @@ class DashboardFragment : Fragment() {
     private inner class ProductHolder(view: View): RecyclerView.ViewHolder(view), View.OnClickListener{
         private val productNameTextView: TextView = view.findViewById(R.id.cart_product_name)
         private var product: GetCartQuery.Product? = null
-        private val SkuListView: ListView = view.findViewById(R.id.cart_sku_list)
+        private val skuLL: LinearLayout = view.findViewById(R.id.cart_sku_ll)
 
         init {
             view.setOnClickListener(this)
@@ -82,8 +86,20 @@ class DashboardFragment : Fragment() {
             productNameTextView.apply {
                 text = product.name
             }
-            val adapter = SkuAdapter(product.skus)
-            SkuListView.adapter = adapter
+            Log.i(TAG, "Length of the skus are ${product.skus.size}")
+            for( sku in product.skus){
+                val returnView = layoutInflater.inflate(R.layout.item_cart_sku,skuLL, false)
+                val skuNameTextView: TextView = returnView.findViewById(R.id.cart_sku_name)
+                val skuQuantityTextView: TextView = returnView.findViewById(R.id.cart_sku_quantity)
+                skuNameTextView.apply {
+                    text = sku.name
+                }
+                skuQuantityTextView.apply {
+                    text = sku.quantity.toString()
+                }
+                Log.i(TAG, "Adding View ")
+                skuLL.addView(returnView)
+            }
         }
 
         override fun onClick(v: View?) {
@@ -111,40 +127,4 @@ class DashboardFragment : Fragment() {
         }
 
     }
-
-    private inner class SkuAdapter(val skus: List<GetCartQuery.Sku>): BaseAdapter(){
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-            val returnView: View =
-                convertView ?: layoutInflater.inflate(R.layout.item_cart_sku, parent, false)
-            val skuNameTextView: TextView = returnView.findViewById(R.id.cart_sku_name)
-            val skuQuantityTextView: TextView = returnView.findViewById(R.id.cart_sku_quantity)
-            val sku = getItem(position)
-            skuNameTextView.apply {
-                text = sku.name
-            }
-            skuQuantityTextView.apply {
-                text = sku.quantity.toString()
-            }
-
-            return returnView
-        }
-
-        override fun getItem(position: Int): GetCartQuery.Sku {
-            return skus[position]
-        }
-
-        override fun getItemId(position: Int): Long {
-            return position.toLong()
-        }
-
-        override fun getCount(): Int {
-            return if(skus.size>3){
-                3
-            }else{
-                skus.size
-            }
-        }
-
-    }
-
 }
