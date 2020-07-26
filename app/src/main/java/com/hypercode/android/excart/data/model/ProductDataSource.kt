@@ -28,7 +28,8 @@ class ProductDataSource @Inject constructor() {
 
     suspend fun fetchSkus(productID: String):ProductQuery.GetProduct?{
         val response = try{
-            authApolloClient().query(ProductQuery(productID)).toDeferred().await()
+            authApolloClient().query(ProductQuery(productID))
+                .toDeferred().await()
         }catch (e: ApolloException){
             Log.d(TAG, "Failed to fetch skus", e)
             null

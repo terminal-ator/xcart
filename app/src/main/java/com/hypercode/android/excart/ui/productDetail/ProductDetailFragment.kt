@@ -9,7 +9,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -44,6 +46,8 @@ class ProductDetailFragment: Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var saveButton: Button
     private lateinit var productHeading: TextView
+    private lateinit var loading: ProgressBar
+    private lateinit var parentLayout: ConstraintLayout
     private var adapter: SkuAdapter? = null
 //    private  var product: ProductQuery.GetProduct? = null?
     private var skuCodes: MutableList<SkuCodes> = mutableListOf()
@@ -58,8 +62,13 @@ class ProductDetailFragment: Fragment() {
         recyclerView = root.findViewById(R.id.sku_recycler) as RecyclerView
         productHeading = root.findViewById(R.id.tv_product_name) as TextView
         saveButton = root.findViewById(R.id.save_button) as Button
+        loading = root.findViewById(R.id.product_loading) as ProgressBar
+        parentLayout = root.findViewById(R.id.detail_container) as ConstraintLayout
         recyclerView.layoutManager = LinearLayoutManager(context)
         (recyclerView.layoutManager as LinearLayoutManager).stackFromEnd = true
+        parentLayout.visibility = View.GONE
+        loading.visibility = View.VISIBLE
+
         productDetailViewModel.getProduct(args.productId).observe(
             viewLifecycleOwner,
             Observer {
@@ -71,6 +80,8 @@ class ProductDetailFragment: Fragment() {
                         }
                         adapter = SkuAdapter(product.skus)
                         recyclerView.adapter = adapter
+                        loading.visibility = View.GONE
+                        parentLayout.visibility = View.VISIBLE
                     }
 
             }
