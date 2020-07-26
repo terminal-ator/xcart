@@ -4,9 +4,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
@@ -87,6 +85,12 @@ class ProductDetailFragment: Fragment() {
             }
         )
         return root
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.product_detail_menu, menu)
+
+        return super.onCreateOptionsMenu(menu)
     }
 
     fun addSku(sku_code: String, quantity: Int){
