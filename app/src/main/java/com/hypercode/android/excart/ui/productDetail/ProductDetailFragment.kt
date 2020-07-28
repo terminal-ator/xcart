@@ -5,7 +5,6 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
 import android.view.*
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -13,25 +12,21 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.apollographql.apollo.coroutines.toDeferred
-import com.apollographql.apollo.exception.ApolloException
 import com.example.AddSkuToCartMutation
 import com.example.ProductQuery
 import com.example.type.AddSkuInput
 import com.example.type.SkuCodes
-import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.hypercode.android.excart.MainActivity
 import com.hypercode.android.excart.R
-import com.hypercode.android.excart.apolloClient
 import com.hypercode.android.excart.authApolloClient
 import com.hypercode.android.excart.data.model.Sku
+import com.hypercode.android.excart.databinding.FragmentProductDetailBinding
 import dagger.hilt.android.AndroidEntryPoint
 
 const val TAG = "ProductDetailFragment"
@@ -42,7 +37,6 @@ class ProductDetailFragment: Fragment() {
     val args: ProductDetailFragmentArgs by navArgs()
     private val productDetailViewModel: ProductDetailViewModel by viewModels()
     private lateinit var recyclerView: RecyclerView
-    private lateinit var saveButton: Button
     private lateinit var productHeading: TextView
     private lateinit var loading: ProgressBar
     private lateinit var parentLayout: ConstraintLayout
@@ -50,6 +44,12 @@ class ProductDetailFragment: Fragment() {
 //    private  var product: ProductQuery.GetProduct? = null?
     private var skuCodes: MutableList<SkuCodes> = mutableListOf()
     private var codeMap: MutableMap<String, Int> = mutableMapOf()
+    private lateinit var binding: FragmentProductDetailBinding
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,11 +59,15 @@ class ProductDetailFragment: Fragment() {
         val root = inflater.inflate(R.layout.fragment_product_detail, container, false)
         recyclerView = root.findViewById(R.id.sku_recycler) as RecyclerView
         productHeading = root.findViewById(R.id.tv_product_name) as TextView
-        saveButton = root.findViewById(R.id.save_button) as Button
         loading = root.findViewById(R.id.product_loading) as ProgressBar
         parentLayout = root.findViewById(R.id.detail_container) as ConstraintLayout
         recyclerView.layoutManager = LinearLayoutManager(context)
         (recyclerView.layoutManager as LinearLayoutManager).stackFromEnd = true
+        val dividerItemDecoration = DividerItemDecoration(
+            recyclerView.context,
+            LinearLayoutManager(context).orientation
+        )
+        recyclerView.addItemDecoration(dividerItemDecoration)
         parentLayout.visibility = View.GONE
         loading.visibility = View.VISIBLE
 
@@ -84,13 +88,25 @@ class ProductDetailFragment: Fragment() {
 
             }
         )
-        return root
+
+        binding = FragmentProductDetailBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, inflater)
         inflater.inflate(R.menu.product_detail_menu, menu)
+    }
 
-        return super.onCreateOptionsMenu(menu)
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when(item.itemId){
+            R.id.product_detail_menu_save -> {
+                saveProduct()
+                true
+            }else -> {
+                super.onOptionsItemSelected(item)
+            }
+        }
     }
 
     fun addSku(sku_code: String, quantity: Int){
@@ -99,40 +115,37 @@ class ProductDetailFragment: Fragment() {
 
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        saveButton.setOnClickListener{
-            if(codeMap.isNotEmpty()){
-                var skuCodes: MutableList<SkuCodes> = mutableListOf()
-                codeMap.forEach{
+    private fun saveProduct(){
+        if(codeMap.isNotEmpty()){
+            var skuCodes: MutableList<SkuCodes> = mutableListOf()
+            codeMap.forEach{
                     (key,value)->
-                        skuCodes.add(SkuCodes(sku_code = key, quantity = value))
-                        val sku = Sku(code = key, quantity = value)
-                        productDetailViewModel.productRepository.updateOrInsert(sku)
+                skuCodes.add(SkuCodes(sku_code = key, quantity = value))
+                val sku = Sku(code = key, quantity = value)
+                productDetailViewModel.productRepository.updateOrInsert(sku)
+            }
+            var mutationInput = AddSkuInput(
+                // TODO Remove static assoc company
+                assoc_company = 2,
+                product_id = args.productId,
+                // TODO Remove static user id
+                user_id = "5f0182ee5b11301c873d9491",
+                skus = skuCodes
+            )
+            Log.i(TAG, mutationInput.toString())
+            lifecycleScope.launchWhenResumed{
+                val response = try {
+                    authApolloClient().mutate(AddSkuToCartMutation(input = mutationInput)).toDeferred().await()
+                }catch (e: Exception){
+                    Log.d(TAG, "Failed to add to cart", e)
+                    null
                 }
-                var mutationInput = AddSkuInput(
-                    // TODO Remove static assoc company
-                    assoc_company = 2,
-                    product_id = args.productId,
-                    // TODO Remove static user id
-                    user_id = "5f0182ee5b11301c873d9491",
-                    skus = skuCodes
-                )
-                Log.i(TAG, mutationInput.toString())
-                saveButton.visibility = View.GONE
-                lifecycleScope.launchWhenResumed{
-                    val response = try {
-                        authApolloClient().mutate(AddSkuToCartMutation(input = mutationInput)).toDeferred().await()
-                    }catch (e: Exception){
-                        Log.d(TAG, "Failed to add to cart", e)
-                        null
-                    }
-                    val cart = response?.data?.addSkuToCart
-                    if(cart == null || response.hasErrors()){
-                        saveButton.visibility = View.VISIBLE
-                        return@launchWhenResumed
-                    }else{
-                        findNavController().popBackStack()
-                    }
+                val cart = response?.data?.addSkuToCart
+                if(cart == null || response.hasErrors()){
+
+                    return@launchWhenResumed
+                }else{
+                    findNavController().popBackStack()
                 }
             }
         }
@@ -150,8 +163,8 @@ class ProductDetailFragment: Fragment() {
             if(sku!=null){
                 val dbSku = productDetailViewModel.productRepository.getSku(sku.code!!)
                 dbSku.observe(viewLifecycleOwner, Observer {
-                    sku -> if(sku!=null){
-                       quantityEditText.setText(sku.quantity.toString())
+                    nSku -> if(nSku!=null){
+                       quantityEditText.setText(nSku.quantity.toString())
                     }
                 })
             }
@@ -159,7 +172,7 @@ class ProductDetailFragment: Fragment() {
                 override fun afterTextChanged(s: Editable?) {
                     try{
                         val quantity: Int = s.toString().toInt();
-                        addSku(sku.code!!, s.toString().toInt())
+                        addSku(sku.code!!, quantity)
                     }catch (e: Exception){
                         Log.d(TAG,"Failed to update for zero quantity",e)
                         addSku(sku.code!!, 0)

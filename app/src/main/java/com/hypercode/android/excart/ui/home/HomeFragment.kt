@@ -14,6 +14,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.apollographql.apollo.ApolloClient
@@ -38,8 +39,6 @@ class HomeFragment : Fragment() {
     }
 
     private var callbacks: Callbacks? = null
-
-
     private  val homeViewModel: HomeViewModel by viewModels()
     private lateinit var productRecyclerView: RecyclerView
     private lateinit var products: List<FetchProductQuery.GetProduct?>
@@ -59,6 +58,8 @@ class HomeFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_home, container, false)
         productRecyclerView = root.findViewById(R.id.product_recycler) as RecyclerView
         productRecyclerView.layoutManager = LinearLayoutManager(context)
+        val dividerItemDecoration  = DividerItemDecoration(productRecyclerView.context, LinearLayoutManager(context).orientation)
+        productRecyclerView.addItemDecoration(dividerItemDecoration)
         homeViewModel.getProducts().observe(
             viewLifecycleOwner,
             Observer {
