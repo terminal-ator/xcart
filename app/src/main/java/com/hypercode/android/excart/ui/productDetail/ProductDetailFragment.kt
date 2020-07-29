@@ -90,6 +90,7 @@ class ProductDetailFragment: Fragment() {
         )
 
         binding = FragmentProductDetailBinding.inflate(inflater, container, false)
+
         return binding.root
     }
 
