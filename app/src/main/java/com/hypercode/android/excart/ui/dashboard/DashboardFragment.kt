@@ -14,6 +14,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.apollographql.apollo.ApolloClient
@@ -42,6 +43,8 @@ class DashboardFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_dashboard, container, false)
         recyclerView = root.findViewById(R.id.cart_recycler)
         recyclerView.layoutManager = LinearLayoutManager(context)
+        val dividerItemDecoration = DividerItemDecoration(recyclerView.context, LinearLayoutManager(context).orientation)
+        recyclerView.addItemDecoration(dividerItemDecoration)
         dashboardViewModel.cartProducts.observe(viewLifecycleOwner, Observer {
             if(it.isNotEmpty()){
                 Log.i(TAG,"Got products $it")
@@ -56,7 +59,7 @@ class DashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launchWhenResumed{
             val response = try{
-                authApolloClient().query(GetCartQuery(userid = userid )).responseFetcher(ApolloResponseFetchers.NETWORK_ONLY).toDeferred().await()
+                authApolloClient().query(GetCartQuery(userid = userid )).responseFetcher(ApolloResponseFetchers.CACHE_AND_NETWORK).toDeferred().await()
             }catch (e: Exception){
                 Log.d(TAG, "Failed to access server", e)
                 null

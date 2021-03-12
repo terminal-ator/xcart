@@ -1,0 +1,6 @@
+query GetProductCompanies($companyID:Int!){
+    getProductCompanies(companyID: $companyID){
+        _id
+        name
+    }
+}

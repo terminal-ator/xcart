@@ -7,9 +7,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.Spinner
+import android.widget.SpinnerAdapter
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.lifecycle.lifecycleScope
@@ -20,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.apollographql.apollo.ApolloClient
 import com.apollographql.apollo.coroutines.toDeferred
 import com.apollographql.apollo.exception.ApolloException
+import com.example.FetchProductCompaniesQuery
 import com.example.FetchProductQuery
 import com.hypercode.android.excart.R
 import com.hypercode.android.excart.apolloClient
@@ -41,9 +45,13 @@ class HomeFragment : Fragment() {
     private var callbacks: Callbacks? = null
     private  val homeViewModel: HomeViewModel by viewModels()
     private lateinit var productRecyclerView: RecyclerView
+    private lateinit var companyRecyclerView: RecyclerView
     private lateinit var products: List<FetchProductQuery.GetProduct?>
+    private  var companies: List<FetchProductCompaniesQuery.GetProductCompany?>? = null
 
     private var adapter: ProductAdapter? = null
+    private var companyAdapter: CompanyAdapter? = null
+    private var selectedCompany = MutableLiveData<String>("all")
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -56,19 +64,45 @@ class HomeFragment : Fragment() {
             savedInstanceState: Bundle?
     ): View? {
         val root = inflater.inflate(R.layout.fragment_home, container, false)
+
         productRecyclerView = root.findViewById(R.id.product_recycler) as RecyclerView
         productRecyclerView.layoutManager = LinearLayoutManager(context)
         val dividerItemDecoration  = DividerItemDecoration(productRecyclerView.context, LinearLayoutManager(context).orientation)
         productRecyclerView.addItemDecoration(dividerItemDecoration)
-        homeViewModel.getProducts().observe(
+
+        companyRecyclerView = root.findViewById(R.id.company_recycler) as RecyclerView
+        companyRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+
+        homeViewModel.refreshProducts()
+
+        homeViewModel.products.observe(
             viewLifecycleOwner,
             Observer {
                     if(it!=null){
+                        Log.i(TAG,"Updating products: ${it}")
                         products = it
                         updateUI()
                     }
             }
         )
+
+        homeViewModel.getCompanies().observe(viewLifecycleOwner,
+        Observer {
+            if(it!=null){
+                Log.i(TAG,it.toString())
+                val allCompany = FetchProductCompaniesQuery.GetProductCompany(_id = "all", name = "All")
+                val finalList = listOf(allCompany) + it
+                companies = finalList
+                companyAdapter = CompanyAdapter(finalList)
+                companyRecyclerView.adapter = companyAdapter
+            }
+        })
+
+        selectedCompany.observe(viewLifecycleOwner,
+        Observer {
+            homeViewModel.refreshProducts(cmpyID = it)
+            Log.i(TAG, it)
+        })
         return root
     }
 
@@ -78,6 +112,7 @@ class HomeFragment : Fragment() {
 
         init{
             view.setOnClickListener(this)
+
         }
 
         fun bind(bindProduct: FetchProductQuery.GetProduct){
@@ -105,7 +140,7 @@ class HomeFragment : Fragment() {
         }
 
         override fun getItemCount(): Int {
-            return products.size;
+            return products.size
         }
 
         override fun onBindViewHolder(holder: ProductHolder, position: Int) {
@@ -125,6 +160,51 @@ class HomeFragment : Fragment() {
     override fun onDetach() {
         super.onDetach()
         callbacks = null
+    }
+
+    private inner class CompanyViewHolder(view: View): RecyclerView.ViewHolder(view), View.OnClickListener{
+
+        val companyTextView: TextView = view.findViewById(R.id.company_name) as TextView
+        var company: FetchProductCompaniesQuery.GetProductCompany? = null
+
+        init {
+            view.setOnClickListener(this)
+            selectedCompany.observe(viewLifecycleOwner, Observer {
+                if(company!=null){
+                    if(it == company?._id){
+                        view.setBackgroundColor(resources.getColor(R.color.selected))
+                    }else{
+                        view.setBackgroundColor(resources.getColor(R.color.unselected))
+                    }
+                }
+            })
+        }
+
+        fun bind(company: FetchProductCompaniesQuery.GetProductCompany){
+            this.company = company
+            companyTextView.text = company.name
+        }
+
+        override fun onClick(v: View?) {
+            selectedCompany.value = company?._id
+        }
+
+    }
+
+    private inner class CompanyAdapter(val companies: List<FetchProductCompaniesQuery.GetProductCompany?>): RecyclerView.Adapter<CompanyViewHolder>(){
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CompanyViewHolder {
+           val view = layoutInflater.inflate(R.layout.company_recycler_item, parent, false)
+            return CompanyViewHolder(view)
+        }
+
+        override fun getItemCount(): Int = companies.size
+
+        override fun onBindViewHolder(holder: CompanyViewHolder, position: Int) {
+            val company = companies[position]
+            if(company!=null)
+                holder.bind(company)
+        }
+
     }
 
 }

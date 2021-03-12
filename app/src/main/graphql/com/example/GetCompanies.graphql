@@ -1,0 +1,7 @@
+query FetchProductCompanies($companyID: Int!)
+{
+    getProductCompanies(companyID: $companyID ){
+        _id
+        name
+    }
+}

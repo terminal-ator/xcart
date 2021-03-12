@@ -26,7 +26,6 @@ import com.example.type.SkuCodes
 import com.hypercode.android.excart.R
 import com.hypercode.android.excart.authApolloClient
 import com.hypercode.android.excart.data.model.Sku
-import com.hypercode.android.excart.databinding.FragmentProductDetailBinding
 import dagger.hilt.android.AndroidEntryPoint
 
 const val TAG = "ProductDetailFragment"
@@ -44,7 +43,7 @@ class ProductDetailFragment: Fragment() {
 //    private  var product: ProductQuery.GetProduct? = null?
     private var skuCodes: MutableList<SkuCodes> = mutableListOf()
     private var codeMap: MutableMap<String, Int> = mutableMapOf()
-    private lateinit var binding: FragmentProductDetailBinding
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,9 +88,9 @@ class ProductDetailFragment: Fragment() {
             }
         )
 
-        binding = FragmentProductDetailBinding.inflate(inflater, container, false)
+//        binding = FragmentProductDetailBinding.inflate(inflater, container, false)
 
-        return binding.root
+        return root
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {

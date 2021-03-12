@@ -1,5 +1,5 @@
-query fetchProduct($companyID: Int!){
-    getProducts(companyID: $companyID){
+query fetchProduct($companyID: Int!, $cmpyID:String){
+    getProducts(companyID: $companyID, cmpyID: $cmpyID){
         _id
         name
     }

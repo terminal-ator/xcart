@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.room.Room
+import com.example.FetchProductCompaniesQuery
 import com.example.FetchProductQuery
 import com.example.ProductQuery
 import com.hypercode.android.excart.data.model.ProductDataSource
@@ -25,14 +26,19 @@ class ProductRepository @Inject constructor(
 
     private val skuDao = database.skuDao()
 
-   suspend fun fetchProducts(): List<FetchProductQuery.GetProduct?>? {
-       val result =  dataSource.fetchProducts()
+   suspend fun fetchProducts(cmpyID: String): List<FetchProductQuery.GetProduct?>? {
+       val result =  dataSource.fetchProducts(cmpyID = cmpyID)
        return result
    }
     suspend fun fetchProduct(productID: String): ProductQuery.GetProduct? {
         val result = dataSource.fetchSkus(productID)
         return result
     }
+
+    suspend fun fetchCompanies():List<FetchProductCompaniesQuery.GetProductCompany?>?{
+        return dataSource.fetchProductCompanies()
+    }
+
 
     fun getSku(id:String): LiveData<Sku?> = skuDao.getSku(id)
 
